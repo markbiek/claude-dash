@@ -9,10 +9,25 @@ export type WatchState = {
   firedUsage: Record<string, number>;
 };
 
+export type ActionScope =
+  | { readonly kind: "session"; readonly key: string }
+  | { readonly kind: "usage"; readonly key: string };
+
 export type Action = {
   kind: "set-status" | "clear-status" | "notify";
   argv: string[];
+  // What this action is for. A failed action must not let its own state
+  // advance, or the event it was announcing is lost with no way to retry.
+  scope: ActionScope;
 };
+
+function sessionScope(pid: number): ActionScope {
+  return { kind: "session", key: String(pid) };
+}
+
+function usageScope(key: string): ActionScope {
+  return { kind: "usage", key };
+}
 
 export const THRESHOLDS = [50, 80, 95];
 
@@ -25,9 +40,10 @@ export function emptyWatchState(): WatchState {
   return { sessions: {}, firedUsage: {} };
 }
 
-function setStatus(workspace: string): Action {
+function setStatus(workspace: string, scope: ActionScope): Action {
   return {
     kind: "set-status",
+    scope,
     argv: [
       "cmux",
       "set-status",
@@ -43,17 +59,23 @@ function setStatus(workspace: string): Action {
   };
 }
 
-function clearStatus(workspace: string): Action {
+function clearStatus(workspace: string, scope: ActionScope): Action {
   return {
     kind: "clear-status",
+    scope,
     argv: ["cmux", "clear-status", STATUS_KEY, "--workspace", workspace],
   };
 }
 
-function notify(title: string, body: string, workspace: string | null): Action {
+function notify(
+  title: string,
+  body: string,
+  workspace: string | null,
+  scope: ActionScope,
+): Action {
   const argv = ["cmux", "notify", "--title", title, "--body", body.slice(0, BODY_MAX)];
   if (workspace !== null) argv.push("--workspace", workspace);
-  return { kind: "notify", argv };
+  return { kind: "notify", argv, scope };
 }
 
 export function diffWatch(
@@ -75,23 +97,35 @@ export function diffWatch(
           `${row.name} needs you`,
           row.lastUserMessage ?? row.cwd,
           workspace,
+          sessionScope(row.pid),
         ),
       );
-      if (workspace !== null) actions.push(setStatus(workspace));
+      if (workspace !== null) {
+        actions.push(setStatus(workspace, sessionScope(row.pid)));
+      }
     }
 
     if (was === "waiting" && row.status !== "waiting") {
       const previousWorkspace = prev.sessions[key]?.workspace ?? workspace;
-      if (previousWorkspace !== null) actions.push(clearStatus(previousWorkspace));
+      if (previousWorkspace !== null) {
+        actions.push(clearStatus(previousWorkspace, sessionScope(row.pid)));
+      }
     }
 
-    next.sessions[key] = { status: row.status, workspace };
+    // The chip lives on the workspace resolved when the session entered
+    // waiting. Keep that workspace for as long as it stays waiting, so the
+    // clear lands where the chip actually is even if the target re-resolves.
+    const stickyWorkspace =
+      row.status === "waiting" && was === "waiting"
+        ? (prev.sessions[key]?.workspace ?? workspace)
+        : workspace;
+    next.sessions[key] = { status: row.status, workspace: stickyWorkspace };
   }
 
   for (const [key, entry] of Object.entries(prev.sessions)) {
     if (next.sessions[key] !== undefined) continue;
     if (entry.status === "waiting" && entry.workspace !== null) {
-      actions.push(clearStatus(entry.workspace));
+      actions.push(clearStatus(entry.workspace, { kind: "session", key }));
     }
   }
 
@@ -112,6 +146,7 @@ export function diffWatch(
           `Claude ${usage.label} at ${Math.round(usage.percent)}%`,
           `resets ${resetLabel(usage.resetsAt, snap.generatedAt)}`,
           null,
+          usageScope(key),
         ),
       );
       next.firedUsage[key] = highest;
@@ -138,17 +173,49 @@ async function readState(path: string): Promise<WatchState> {
   }
 }
 
-async function runAction(action: Action): Promise<void> {
+async function runAction(action: Action): Promise<boolean> {
   try {
     const proc = Bun.spawn(action.argv, {
       stdout: "ignore",
       stderr: "ignore",
       env: { ...process.env, CMUX_QUIET: "1" },
     });
-    await proc.exited;
+    return (await proc.exited) === 0;
   } catch {
-    // cmux may not be running. The next tick tries again.
+    // cmux may not be running at all.
+    return false;
   }
+}
+
+// Commit the diff, except for the scopes whose actions failed. Those keep their
+// previous value so the next tick sees the same transition and retries it. A
+// scope with no previous value is dropped entirely, which has the same effect.
+export function commit(
+  prev: WatchState,
+  next: WatchState,
+  failed: ReadonlySet<string>,
+): WatchState {
+  const sessions: Record<string, WatchEntry> = {};
+  for (const [key, entry] of Object.entries(next.sessions)) {
+    if (failed.has(`session:${key}`)) {
+      const previous = prev.sessions[key];
+      if (previous !== undefined) sessions[key] = previous;
+      continue;
+    }
+    sessions[key] = entry;
+  }
+
+  const firedUsage: Record<string, number> = {};
+  for (const [key, value] of Object.entries(next.firedUsage)) {
+    if (failed.has(`usage:${key}`)) {
+      const previous = prev.firedUsage[key];
+      if (previous !== undefined) firedUsage[key] = previous;
+      continue;
+    }
+    firedUsage[key] = value;
+  }
+
+  return { sessions, firedUsage };
 }
 
 export async function runWatch(opts: {
@@ -176,8 +243,13 @@ export async function runWatch(opts: {
     }
 
     const { actions, next } = diffWatch(state, snap, THRESHOLDS);
-    for (const action of actions) await runAction(action);
-    state = next;
+    const failed = new Set<string>();
+    for (const action of actions) {
+      if (!(await runAction(action))) {
+        failed.add(`${action.scope.kind}:${action.scope.key}`);
+      }
+    }
+    state = commit(state, next, failed);
     await Bun.write(opts.statePath, JSON.stringify(state));
   }
 

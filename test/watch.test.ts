@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { diffWatch, emptyWatchState, THRESHOLDS } from "../src/watch";
+import { commit, diffWatch, emptyWatchState, THRESHOLDS } from "../src/watch";
 import type { SessionRow, Snapshot } from "../src/collect";
 import { ok } from "../src/result";
 
@@ -107,6 +107,71 @@ test("a new reset window starts with a clean fired set", () => {
   expect(actions).toHaveLength(1);
   expect(next.firedUsage["weekly_all:2026-09-20T01:59:59Z"]).toBe(50);
   expect(next.firedUsage["weekly_all:2026-09-13T01:59:59Z"]).toBeUndefined();
+});
+
+test("the chip clears on the workspace it was set on, not the current one", () => {
+  const OTHER = { workspace: "workspace:99", window: "window:1", title: "other" };
+  const enter = diffWatch(emptyWatchState(), snapshot([row({ status: "waiting" })]), THRESHOLDS);
+  expect(enter.actions.find((a) => a.kind === "set-status")?.argv).toContain("workspace:17");
+
+  const drift = diffWatch(
+    enter.next,
+    snapshot([row({ status: "waiting", target: OTHER })]),
+    THRESHOLDS,
+  );
+  expect(drift.actions).toEqual([]);
+
+  const leave = diffWatch(
+    drift.next,
+    snapshot([row({ status: "idle", target: OTHER })]),
+    THRESHOLDS,
+  );
+  const cleared = leave.actions.find((a) => a.kind === "clear-status");
+  expect(cleared?.argv).toContain("workspace:17");
+  expect(cleared?.argv).not.toContain("workspace:99");
+});
+
+test("every action names the scope it belongs to", () => {
+  const usage = ok([
+    { kind: "weekly_all" as const, label: "WEEK", percent: 83, severity: "warning", resetsAt: "R" },
+  ]);
+  const { actions } = diffWatch(
+    emptyWatchState(),
+    snapshot([row({ status: "waiting" })], usage),
+    THRESHOLDS,
+  );
+  for (const action of actions) expect(action.scope).toBeDefined();
+  expect(
+    actions.filter((a) => a.scope.kind === "session").every((a) => a.scope.key === "7"),
+  ).toBe(true);
+  expect(actions.find((a) => a.scope.kind === "usage")?.scope.key).toBe("weekly_all:R");
+});
+
+test("commit keeps everything when no action failed", () => {
+  const prev = { sessions: { "7": { status: "idle", workspace: null } }, firedUsage: { a: 50 } };
+  const next = { sessions: { "7": { status: "waiting", workspace: "w" } }, firedUsage: { a: 80 } };
+  expect(commit(prev, next, new Set())).toEqual(next);
+});
+
+test("commit rolls a failed session back so the next tick retries it", () => {
+  const prev = { sessions: { "7": { status: "idle", workspace: null } }, firedUsage: {} };
+  const next = { sessions: { "7": { status: "waiting", workspace: "w" } }, firedUsage: {} };
+  const out = commit(prev, next, new Set(["session:7"]));
+  expect(out.sessions["7"]).toEqual({ status: "idle", workspace: null });
+});
+
+test("commit drops a failed session that had no previous entry", () => {
+  const prev = { sessions: {}, firedUsage: {} };
+  const next = { sessions: { "7": { status: "waiting", workspace: "w" } }, firedUsage: {} };
+  const out = commit(prev, next, new Set(["session:7"]));
+  expect(out.sessions["7"]).toBeUndefined();
+});
+
+test("commit rolls back only the usage bucket that failed", () => {
+  const prev = { sessions: {}, firedUsage: { a: 50, b: 50 } };
+  const next = { sessions: {}, firedUsage: { a: 80, b: 80 } };
+  const out = commit(prev, next, new Set(["usage:a"]));
+  expect(out.firedUsage).toEqual({ a: 50, b: 80 });
 });
 
 test("a failed usage fetch changes nothing", () => {
