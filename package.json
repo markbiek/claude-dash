@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "TZ=America/New_York bun test",
     "typecheck": "tsc --noEmit",
     "build": "bun build --compile src/cli.ts --outfile dist/claude-dash",
     "dash": "bun run src/cli.ts",
