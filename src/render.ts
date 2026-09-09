@@ -6,6 +6,10 @@ export type UiState = { selected: number; idleExpanded: boolean };
 export type Group = "waiting" | "busy" | "other";
 
 const IDLE_PREVIEW = 5;
+// The model sits in a fixed column so the eye can scan it. Nine characters
+// covers the longest short name in use (fable-5-1, haiku-4-5).
+const MODEL_W = 9;
+const AGE_W = 4;
 const GROUP_ORDER: Group[] = ["waiting", "busy", "other"];
 const MARKER: Record<Group, string> = { waiting: "●", busy: "◆", other: " " };
 const TOOL_ICON: Record<Group, string> = { waiting: "⏸", busy: "⚙", other: "·" };
@@ -99,7 +103,7 @@ function detailLines(
 
   const head = fit(
     `${sel}${MARKER[group]} ${row.name}`,
-    `${shortModel(row.model)}  ${pad(age, 4)}`,
+    `${pad(shortModel(row.model), MODEL_W)} ${age.padStart(AGE_W)}`,
     width,
   );
 
@@ -109,7 +113,11 @@ function detailLines(
     width,
   );
 
-  const said = truncate(`   › "${row.lastUserMessage ?? "—"}"`, width);
+  // A missing message is not a message that says "—". Leave it unquoted.
+  const said =
+    row.lastUserMessage === null
+      ? "   › —"
+      : truncate(`   › "${row.lastUserMessage}"`, width);
   const tool = truncate(`   ${TOOL_ICON[group]} ${row.lastTool ?? "—"}`, width);
 
   return [head, place, said, tool];
@@ -126,7 +134,7 @@ function idleLine(
   const age = relAge(snap.generatedAt - row.statusUpdatedAt);
   const name = pad(truncate(row.name, 18), 18);
   const place = shortPath(row.cwd, home, Math.max(8, width - 30));
-  return fit(`${sel}  ${name} ${place}`, pad(age, 4), width);
+  return fit(`${sel}  ${name} ${place}`, age.padStart(AGE_W), width);
 }
 
 export function render(
@@ -149,7 +157,8 @@ export function render(
   visible.forEach((row, index) => {
     const group = groupOf(row.status);
     if (group !== lastGroup) {
-      if (lastGroup !== null) lines.push("");
+      // A detail block already ends in a blank line. Do not add a second.
+      if (lastGroup !== null && lines[lines.length - 1] !== "") lines.push("");
       lines.push(sectionLine(GROUP_TITLE[group], width));
       lastGroup = group;
     }

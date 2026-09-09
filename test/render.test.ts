@@ -155,6 +155,48 @@ test("render never exceeds the requested width", () => {
   }
 });
 
+test("render puts the model in a fixed column regardless of its length", () => {
+  const snap = snapshot([
+    row({ pid: 1, status: "busy", name: "sessionname", model: "claude-opus-5" }),
+    row({ pid: 2, status: "busy", name: "sessionname", model: "claude-fable-5-1" }),
+  ]);
+  const heads = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark")
+    .filter((l) => /^[ ▸][●◆] /.test(l));
+  expect(heads).toHaveLength(2);
+  expect(heads[0]?.indexOf("opus-5")).toBe(heads[1]?.indexOf("fable-5-1"));
+});
+
+test("render never emits two blank lines in a row", () => {
+  const snap = snapshot([
+    row({ pid: 1, status: "waiting" }),
+    row({ pid: 2, status: "busy" }),
+    row({ pid: 3, status: "idle" }),
+    row({ pid: 4, status: "idle" }),
+  ]);
+  const lines = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark");
+  for (let i = 1; i < lines.length; i++) {
+    expect(lines[i] === "" && lines[i - 1] === "").toBe(false);
+  }
+});
+
+test("render shows a bare dash for a missing user message, not a quoted one", () => {
+  const snap = snapshot([row({ pid: 1, status: "busy", lastUserMessage: null })]);
+  const text = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
+  expect(text).toContain("› —");
+  expect(text).not.toContain('"—"');
+});
+
+test("render leaves no trailing whitespace on any line", () => {
+  const snap = snapshot([
+    row({ pid: 1, status: "waiting" }),
+    row({ pid: 2, status: "busy" }),
+    row({ pid: 3, status: "idle" }),
+  ]);
+  for (const line of render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark")) {
+    expect(line).toBe(line.replace(/\s+$/, ""));
+  }
+});
+
 test("render reports an empty session list", () => {
   const text = render(snapshot([]), 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
   expect(text).toContain("no live sessions");
