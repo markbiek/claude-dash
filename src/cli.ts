@@ -6,11 +6,13 @@ import { planFocus, runFocus } from "./focus";
 import { render } from "./render";
 import { isOk } from "./result";
 import { runTui } from "./tui";
+import { runWatch } from "./watch";
 
 const HOME = homedir();
 const CLAUDE_DIR = join(HOME, ".claude");
 const CACHE_DIR = join(HOME, ".cache", "claude-dash");
 const USAGE_CACHE = join(CACHE_DIR, "usage.json");
+const WATCH_STATE = join(CACHE_DIR, "watch-state.json");
 const USAGE_TTL_MS = 60_000;
 const CMUX_TTL_MS = 10_000;
 
@@ -52,6 +54,18 @@ async function main(): Promise<number> {
       process.stderr.write(result.reason + "\n");
       return 1;
     }
+    return 0;
+  }
+
+  if (args.includes("--watch")) {
+    await runWatch({
+      claudeDir: CLAUDE_DIR,
+      cachePath: USAGE_CACHE,
+      statePath: WATCH_STATE,
+      usageTtlMs: USAGE_TTL_MS,
+      cmuxTtlMs: CMUX_TTL_MS,
+      intervalMs: 2_000,
+    });
     return 0;
   }
 
