@@ -16,6 +16,11 @@ test("bar clamps out of range input", () => {
   expect(bar(140, 4)).toBe("████");
 });
 
+test("bar returns an empty string for a zero or negative width", () => {
+  expect(bar(50, 0)).toBe("");
+  expect(bar(50, -3)).toBe("");
+});
+
 test("relAge uses the largest unit that fits", () => {
   expect(relAge(5_000)).toBe("now");
   expect(relAge(4 * 60_000)).toBe("4m");
@@ -52,6 +57,14 @@ test("shortPath truncates a long final segment", () => {
   const home = "/Users/mark";
   expect(shortPath("/Users/mark/dev/a8c/wpcom-wt/domain-abilities", home, 14))
     .toBe("~/…/domain-ab…");
+});
+
+test("shortPath never exceeds max, even below the collapsed scaffold width", () => {
+  const home = "/Users/mark";
+  const path = "/Users/mark/dev/a8c/wpcom-wt/domain-abilities";
+  for (const max of [0, 1, 2, 3, 4]) {
+    expect([...shortPath(path, home, max)].length).toBeLessThanOrEqual(max);
+  }
 });
 
 test("truncate adds an ellipsis only when it cuts", () => {

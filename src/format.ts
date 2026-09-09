@@ -2,6 +2,7 @@ const FILLED = "█";
 const EMPTY = "▁";
 
 export function bar(percent: number, width: number): string {
+  if (width <= 0) return "";
   const clamped = Math.min(100, Math.max(0, percent));
   let filled = Math.round((clamped / 100) * width);
   if (clamped > 0 && filled === 0) filled = 1;
@@ -64,5 +65,6 @@ export function shortPath(absPath: string, home: string, max: number): string {
   if (collapsed.length <= max) return collapsed;
 
   const room = max - (head.length + 3);
+  if (room <= 0) return truncate(p, max);
   return `${head}/…/${truncate(last, room)}`;
 }
