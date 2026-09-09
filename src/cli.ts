@@ -5,6 +5,7 @@ import { collect } from "./collect";
 import { planFocus, runFocus } from "./focus";
 import { render } from "./render";
 import { isOk } from "./result";
+import { runTui } from "./tui";
 
 const HOME = homedir();
 const CLAUDE_DIR = join(HOME, ".claude");
@@ -80,8 +81,22 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  process.stderr.write("usage: claude-dash [--json]\n");
-  return 2;
+  if (args.length > 0) {
+    process.stderr.write(
+      "usage: claude-dash [--json | --once | --watch | --focus <pid>]\n",
+    );
+    return 2;
+  }
+
+  await runTui({
+    claudeDir: CLAUDE_DIR,
+    cachePath: USAGE_CACHE,
+    home: HOME,
+    usageTtlMs: USAGE_TTL_MS,
+    cmuxTtlMs: CMUX_TTL_MS,
+    intervalMs: 1_000,
+  });
+  return 0;
 }
 
 process.exit(await main());
