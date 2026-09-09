@@ -86,10 +86,16 @@ export async function runTui(opts: {
 
   process.stdout.write(ALT_SCREEN_ON + CURSOR_HIDE);
   process.on("exit", teardown);
-  process.on("SIGINT", () => {
-    teardown();
-    process.exit(0);
-  });
+  // A cmux Dock pane drops to a shell when its command exits rather than
+  // closing, so a skipped teardown leaves that pane in raw mode on the
+  // alternate screen. The exit event does not fire for an unhandled fatal
+  // signal, so every signal that can end this process must be named.
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    process.on(signal, () => {
+      teardown();
+      process.exit(0);
+    });
+  }
   process.stdout.on("resize", paint);
 
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
