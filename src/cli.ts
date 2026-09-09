@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { collect } from "./collect";
+import { render } from "./render";
 
 const HOME = homedir();
 const CLAUDE_DIR = join(HOME, ".claude");
@@ -27,6 +28,20 @@ async function main(): Promise<number> {
       cmuxTtlMs: CMUX_TTL_MS,
     });
     process.stdout.write(JSON.stringify(snap, null, 2) + "\n");
+    return 0;
+  }
+
+  if (args.includes("--once")) {
+    const snap = await collect({
+      now: Date.now(),
+      claudeDir: CLAUDE_DIR,
+      cachePath: USAGE_CACHE,
+      usageTtlMs: USAGE_TTL_MS,
+      cmuxTtlMs: CMUX_TTL_MS,
+    });
+    const width = process.stdout.columns ?? 62;
+    const lines = render(snap, width, { selected: 0, idleExpanded: false }, HOME);
+    process.stdout.write(lines.join("\n") + "\n");
     return 0;
   }
 
