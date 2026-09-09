@@ -38,6 +38,17 @@ test("parseCmuxTop indexes every workspace by its title", () => {
   });
 });
 
+test("parseCmuxTop ignores a label that merely embeds an attach command", () => {
+  const tsv = [
+    "12.4\t1\t1\twindow\twindow:1\ttotal\t",
+    "0.1\t1\t1\tworkspace\tworkspace:9\twindow:1\tdecoy",
+    "0.1\t1\t1\tpane\tpane:9\tworkspace:9\t",
+    "0.1\t1\t1\tsurface\tsurface:9\tpane:9\techo run: tmux attach -t '=a' # not an attach",
+  ].join("\n");
+  const map = parseCmuxTop(tsv);
+  expect(map.byTmuxSession.has("a")).toBe(false);
+});
+
 test("lookupTarget takes the tmux session name from the session field", () => {
   const map = parseCmuxTop(SYNTHETIC);
   expect(lookupTarget(map, "bug-fix:@2.%51")?.workspace).toBe("workspace:17");

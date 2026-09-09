@@ -7,7 +7,10 @@ export type CmuxMap = {
 
 type Row = { type: string; ref: string; parent: string; label: string };
 
-const ATTACH = /tmux\s+attach\s+-t\s+'=([^']+)'/;
+// Anchored on purpose. A cmux surface label is an arbitrary command line, and
+// an unanchored match would register any label that merely embeds the substring
+// as a live tmux surface.
+const ATTACH = /^tmux\s+attach\s+-t\s+'=([^']+)'$/;
 
 export function parseCmuxTop(tsv: string): CmuxMap {
   const rows = new Map<string, Row>();
@@ -44,7 +47,7 @@ export function parseCmuxTop(tsv: string): CmuxMap {
 
   for (const row of rows.values()) {
     if (row.type !== "surface") continue;
-    const match = row.label.match(ATTACH);
+    const match = row.label.trim().match(ATTACH);
     if (match === null || match[1] === undefined) continue;
 
     const pane = rows.get(row.parent);
