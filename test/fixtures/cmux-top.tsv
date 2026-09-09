@@ -1,0 +1,104 @@
+113.3	2761231936	57	total	total		
+112.7	2381314712	36	window	window:1	total	
+112.1	2254918192	1	process	4556	window:1	cmux
+0.0	10928920	2	workspace	workspace:1	window:1	wpcom-sandbox
+0.0	10928920	2	pane	pane:1	workspace:1	
+0.0	10928920	2	surface	surface:1	pane:1	tmux
+0.0	1933672	1	process	89164	surface:1	tmux
+0.0	8995248	1	process	15051	surface:1	zsh
+0.1	12977256	4	workspace	workspace:2	window:1	review
+0.1	12977256	4	pane	pane:2	workspace:2	
+0.1	12977256	4	surface	surface:3	pane:2	tms
+0.0	966848	1	process	71728	surface:3	sleep
+0.0	1933672	1	process	25625	surface:3	tmux
+0.0	8356224	1	process	25420	surface:3	zsh
+0.1	1720512	1	process	25623	25420	zsh
+0.1	13468776	4	workspace	workspace:17	window:1	bug-fix
+0.1	13468776	4	pane	pane:20	workspace:17	
+0.1	13468776	4	surface	surface:24	pane:20	tmux attach -t '=bug-fix'
+0.0	983232	1	process	71752	surface:24	sleep
+0.0	1868136	1	process	57084	surface:24	tmux
+0.0	8372608	1	process	56948	surface:24	zsh
+0.1	2244800	1	process	57082	56948	zsh
+0.1	13436008	4	workspace	workspace:19	window:1	dotmkt-general
+0.1	13436008	4	pane	pane:22	workspace:19	
+0.1	13436008	4	surface	surface:27	pane:22	tmux attach -t '=dotmkt-general'
+0.0	966848	1	process	71720	surface:27	sleep
+0.0	1917288	1	process	97515	surface:27	tmux
+0.0	8388992	1	process	97354	surface:27	zsh
+0.1	2162880	1	process	97513	97354	zsh
+0.1	13665432	4	workspace	workspace:24	window:1	dotobrd-466
+0.1	13665432	4	pane	pane:28	workspace:24	
+0.1	13665432	4	surface	surface:33	pane:28	tmux attach -t '=dotobrd-4'
+0.0	966848	1	process	71745	surface:33	sleep
+0.0	1884496	1	process	97571	surface:33	tmux
+0.0	8503728	1	process	97443	surface:33	zsh
+0.1	2310360	1	process	97569	97443	zsh
+0.1	13304984	4	workspace	workspace:25	window:1	dotobrd-621
+0.1	13304984	4	pane	pane:29	workspace:25	
+0.1	13304984	4	surface	surface:34	pane:29	tmux attach -t '=dotobrd-621'
+0.0	966848	1	process	71722	surface:34	sleep
+0.0	1950056	1	process	4905	surface:34	tmux
+0.0	8618392	1	process	4719	surface:34	zsh
+0.1	1769688	1	process	4903	4719	zsh
+0.1	13681768	4	workspace	workspace:26	window:1	domeng-383
+0.1	13681768	4	pane	pane:30	workspace:26	
+0.1	13681768	4	surface	surface:35	pane:30	tmux attach -t '=domeng-383'
+0.0	983232	1	process	71729	surface:35	sleep
+0.0	1900904	1	process	69499	surface:35	tmux
+0.0	8536448	1	process	69360	surface:35	zsh
+0.1	2261184	1	process	69497	69360	zsh
+0.1	13091944	4	workspace	workspace:23	window:1	domains-2238
+0.1	13091944	4	pane	pane:27	workspace:23	
+0.1	13091944	4	surface	surface:32	pane:27	tmux attach -t '=domains-2238'
+0.0	966848	1	process	71743	surface:32	sleep
+0.0	1884520	1	process	61863	surface:32	tmux
+0.0	8503680	1	process	61723	surface:32	zsh
+0.1	1736896	1	process	61861	61723	zsh
+0.1	13599896	4	workspace	workspace:20	window:1	domain-abilities
+0.1	13599896	4	pane	pane:23	workspace:20	
+0.1	13599896	4	surface	surface:28	pane:23	tmux attach -t '=domain-abilities'
+0.0	966848	1	process	71753	surface:28	sleep
+0.0	1917288	1	process	5595	surface:28	tmux
+0.0	8438168	1	process	5463	surface:28	zsh
+0.1	2277592	1	process	5593	5463	zsh
+0.0	8241536	1	workspace	workspace:8	window:1	domain-medic
+0.0	8241536	1	pane	pane:8	workspace:8	
+0.0	8241536	1	surface	surface:9	pane:8	mark@MacBook-Pro-24:~/dev/a8c/wpcom-wt/domain-medic
+0.0	8241536	1	process	75798	surface:9	zsh
+0.3	328811304	7	window	window:4	total	
+0.3	328811304	7	workspace	workspace:14	window:4	vi selected-posts.txt
+0.3	328811304	7	pane	pane:16	workspace:14	
+0.3	328811304	7	surface	surface:20	pane:16	vi selected-posts.txt
+0.0	66988712	1	process	59040	surface:20	node
+0.0	214880704	1	process	59143	59040	node
+0.0	3752320	1	process	59017	surface:20	nvim
+0.2	30802448	1	process	59018	59017	nvim
+0.0	966848	1	process	71748	surface:20	sleep
+0.0	9634200	1	process	58802	surface:20	zsh
+0.1	1786072	1	process	59015	58802	zsh
+0.2	51105920	14	window	window:3	total	
+0.2	26298624	8	workspace	workspace:10	window:3	notes
+0.2	26298624	8	pane	pane:10	workspace:10	
+0.1	13452440	4	surface	surface:11	pane:10	notes
+0.0	966848	1	process	71751	surface:11	sleep
+0.0	1933672	1	process	29559	surface:11	tmux
+0.1	1753280	1	process	29557	surface:11	zsh
+0.0	8798640	1	process	4643	surface:11	zsh
+0.1	12846184	4	surface	surface:13	pane:10	filewatcher
+0.0	966848	1	process	71727	surface:13	sleep
+0.0	1933672	1	process	50647	surface:13	tmux
+0.1	1704128	1	process	50645	surface:13	zsh
+0.0	8241536	1	process	64107	surface:13	zsh
+0.1	14025856	4	workspace	workspace:15	window:3	antelope-moo
+0.1	14025856	4	pane	pane:17	workspace:15	
+0.1	14025856	4	surface	surface:21	pane:17	tms
+0.0	966848	1	process	71730	surface:21	sleep
+0.0	1917288	1	process	69626	surface:21	tmux
+0.0	8798592	1	process	68827	surface:21	zsh
+0.1	2343128	1	process	69624	68827	zsh
+0.0	10781440	2	workspace	workspace:28	window:3	biek-org
+0.0	10781440	2	pane	pane:31	workspace:28	
+0.0	10781440	2	surface	surface:36	pane:31	tmux
+0.0	1933672	1	process	54903	surface:36	tmux
+0.0	8847768	1	process	53881	surface:36	zsh

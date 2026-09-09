@@ -1,0 +1,17 @@
+{
+  "name": "claude-dash",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build --compile src/cli.ts --outfile dist/claude-dash",
+    "dash": "bun run src/cli.ts",
+    "snapshot": "bun run src/cli.ts --json"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "pid": 1001,
+  "sessionId": "0c2fe876-2fc0-41e0-b7d3-381ca853e573",
+  "cwd": "/Users/mark/dev/a8c/wpcom-wt/bug-fix",
+  "startedAt": 1788959209320,
+  "procStart": "Wed Sep  9 13:06:46 2026",
+  "version": "2.1.266",
+  "peerProtocol": 1,
+  "peerFeatures": [
+    "notify_idle",
+    "reply_across_default_dirs",
+    "artifact_yield"
+  ],
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "pidDomain": "darwin",
+  "tmux": "bug-fix:@10.%28",
+  "name": "bug-fix-af",
+  "nameSource": "derived",
+  "nameSince": 1788959209320,
+  "status": "waiting",
+  "updatedAt": 1788959745418,
+  "statusUpdatedAt": 1788959745418
+}

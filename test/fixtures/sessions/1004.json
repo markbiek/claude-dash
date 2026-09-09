@@ -1,0 +1,24 @@
+{
+  "pid": 1004,
+  "sessionId": "07c483cc-529a-49bd-b016-02c5a50c7767",
+  "cwd": "/Users/mark/notes",
+  "startedAt": 1788959071673,
+  "procStart": "Wed Sep  9 13:04:30 2026",
+  "version": "2.1.265",
+  "peerProtocol": 1,
+  "peerFeatures": [
+    "notify_idle",
+    "reply_across_default_dirs",
+    "artifact_yield"
+  ],
+  "kind": "interactive",
+  "entrypoint": "cli",
+  "pidDomain": "darwin",
+  "tmux": "notes:@2.%5",
+  "name": "notes-ba",
+  "nameSource": "derived",
+  "nameSince": 1788959071673,
+  "status": "compacting",
+  "updatedAt": 1788976597363,
+  "statusUpdatedAt": 1788976597363
+}
