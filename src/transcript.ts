@@ -41,10 +41,18 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+// The harness injects several kinds of turn with the user role. Some open with
+// the tag, and some carry a prose prefix before it, so a leading-"<" test alone
+// is not enough. A turn holding any of these is machinery, not something a
+// person typed, so the scan keeps walking back to the last real message.
+const INJECTED_BLOCK =
+  /<(system-reminder|teammate-message|cross-session-message|local-command-caveat|command-name|command-message|task-notification)\b/;
+
 function cleanUserText(text: string): string | null {
   const trimmed = text.trim();
   if (trimmed.length === 0) return null;
   if (trimmed.startsWith("<")) return null;
+  if (INJECTED_BLOCK.test(trimmed)) return null;
   return trimmed.replace(/\s+/g, " ");
 }
 

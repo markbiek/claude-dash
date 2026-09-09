@@ -54,6 +54,20 @@ test("parseTranscript skips tool results and reminder blocks", () => {
   expect(parseTranscript(text).lastUserMessage).toBe("the real question");
 });
 
+test("parseTranscript skips a harness turn that opens with prose", () => {
+  const text = [
+    JSON.stringify({ type: "user", message: { content: "deploy the thing" } }),
+    JSON.stringify({
+      type: "user",
+      message: {
+        content:
+          'Another Claude session sent a message: <teammate-message id="x">done</teammate-message>',
+      },
+    }),
+  ].join("\n");
+  expect(parseTranscript(text).lastUserMessage).toBe("deploy the thing");
+});
+
 test("parseTranscript labels a tool with its first useful argument", () => {
   const text = JSON.stringify({
     type: "assistant",
