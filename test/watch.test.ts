@@ -174,6 +174,25 @@ test("commit rolls back only the usage bucket that failed", () => {
   expect(out.firedUsage).toEqual({ a: 50, b: 80 });
 });
 
+test("commit retries a failed clear for a session that vanished", () => {
+  const prev = {
+    sessions: { "7": { status: "waiting", workspace: "workspace:17" } },
+    firedUsage: {},
+  };
+  const next = { sessions: {}, firedUsage: {} };
+  const out = commit(prev, next, new Set(["session:7"]));
+  expect(out.sessions["7"]).toEqual({ status: "waiting", workspace: "workspace:17" });
+});
+
+test("commit drops a vanished session whose clear succeeded", () => {
+  const prev = {
+    sessions: { "7": { status: "waiting", workspace: "workspace:17" } },
+    firedUsage: {},
+  };
+  const next = { sessions: {}, firedUsage: {} };
+  expect(commit(prev, next, new Set()).sessions["7"]).toBeUndefined();
+});
+
 test("a failed usage fetch changes nothing", () => {
   const prev = { sessions: {}, firedUsage: { "weekly_all:x": 50 } };
   const { actions, next } = diffWatch(

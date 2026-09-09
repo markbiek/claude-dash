@@ -190,32 +190,38 @@ async function runAction(action: Action): Promise<boolean> {
 // Commit the diff, except for the scopes whose actions failed. Those keep their
 // previous value so the next tick sees the same transition and retries it. A
 // scope with no previous value is dropped entirely, which has the same effect.
+//
+// The walk covers both maps, not just the new one. A session that disappears
+// while its chip is still set has no entry in `next` at all, so iterating only
+// `next` would silently drop it and the failed clear would never retry.
+function rollback<T>(
+  prevMap: Readonly<Record<string, T>>,
+  nextMap: Readonly<Record<string, T>>,
+  failed: ReadonlySet<string>,
+  prefix: string,
+): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const key of new Set([...Object.keys(prevMap), ...Object.keys(nextMap)])) {
+    if (failed.has(`${prefix}:${key}`)) {
+      const previous = prevMap[key];
+      if (previous !== undefined) out[key] = previous;
+      continue;
+    }
+    const value = nextMap[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
 export function commit(
   prev: WatchState,
   next: WatchState,
   failed: ReadonlySet<string>,
 ): WatchState {
-  const sessions: Record<string, WatchEntry> = {};
-  for (const [key, entry] of Object.entries(next.sessions)) {
-    if (failed.has(`session:${key}`)) {
-      const previous = prev.sessions[key];
-      if (previous !== undefined) sessions[key] = previous;
-      continue;
-    }
-    sessions[key] = entry;
-  }
-
-  const firedUsage: Record<string, number> = {};
-  for (const [key, value] of Object.entries(next.firedUsage)) {
-    if (failed.has(`usage:${key}`)) {
-      const previous = prev.firedUsage[key];
-      if (previous !== undefined) firedUsage[key] = previous;
-      continue;
-    }
-    firedUsage[key] = value;
-  }
-
-  return { sessions, firedUsage };
+  return {
+    sessions: rollback(prev.sessions, next.sessions, failed, "session"),
+    firedUsage: rollback(prev.firedUsage, next.firedUsage, failed, "usage"),
+  };
 }
 
 export async function runWatch(opts: {
