@@ -34,8 +34,14 @@ rebuild only takes effect once it is copied there:
     cp dist/claude-dash ~/bin/claude-dash
 
 Then see `install/` for the two files. Copy the plist to
-`~/Library/LaunchAgents` and add the Dock control to
-`~/.config/cmux/dock.json`.
+`~/Library/LaunchAgents`.
+
+Back up `~/.config/cmux/dock.json` before touching it, then add the object from
+`install/dock-control.json` to its `controls` array by hand:
+
+    cp ~/.config/cmux/dock.json ~/.config/cmux/dock.json.bak-$(date +%Y%m%d-%H%M%S)
+
+A malformed `dock.json` takes out the Dock, so the backup is the way back.
 
 ## Design
 

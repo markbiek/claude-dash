@@ -29,6 +29,7 @@ function row(over: Partial<SessionRow>): SessionRow {
 function snapshot(sessions: SessionRow[]): Snapshot {
   return {
     generatedAt: NOW,
+    usageAt: NOW,
     usage: ok([
       { kind: "session", label: "SESSION", percent: 5, severity: "normal", resetsAt: null },
       { kind: "weekly_all", label: "WEEK", percent: 23, severity: "normal", resetsAt: null },
@@ -68,9 +69,9 @@ test("visibleRows caps the collapsed idle list at five", () => {
   const many = Array.from({ length: 9 }, (_, i) =>
     row({ pid: 100 + i, status: "idle", statusUpdatedAt: NOW - i * 1000 }),
   );
-  const collapsed = visibleRows(many, { selected: 0, idleExpanded: false });
+  const collapsed = visibleRows(many, { selectedPid: null, idleExpanded: false });
   expect(collapsed).toHaveLength(5);
-  const expanded = visibleRows(many, { selected: 0, idleExpanded: true });
+  const expanded = visibleRows(many, { selectedPid: null, idleExpanded: true });
   expect(expanded).toHaveLength(9);
 });
 
@@ -80,7 +81,7 @@ test("visibleRows never hides a waiting or busy row", () => {
     row({ pid: 1, status: "waiting" }),
     row({ pid: 2, status: "busy" }),
   ];
-  const visible = visibleRows(rows, { selected: 0, idleExpanded: false });
+  const visible = visibleRows(rows, { selectedPid: null, idleExpanded: false });
   expect(visible.map((r) => r.pid).slice(0, 2)).toEqual([1, 2]);
   expect(visible).toHaveLength(7);
 });
@@ -93,7 +94,7 @@ test("shortModel strips the vendor prefix and the date suffix", () => {
 });
 
 test("render draws one usage line per limit", () => {
-  const lines = render(snapshot([]), 62, { selected: 0, idleExpanded: false }, "/Users/mark");
+  const lines = render(snapshot([]), 62, { selectedPid: null, idleExpanded: false }, "/Users/mark");
   expect(lines[0]).toContain("SESSION");
   expect(lines[1]).toContain("WEEK");
   expect(lines[2]).toContain("FABLE");
@@ -102,7 +103,7 @@ test("render draws one usage line per limit", () => {
 
 test("render shows the usage reason when the fetch failed", () => {
   const snap = { ...snapshot([]), usage: err("reauth") };
-  const lines = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark");
+  const lines = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark");
   expect(lines.join("\n")).toContain("reauth");
 });
 
@@ -117,7 +118,7 @@ test("render gives a waiting session four detail lines", () => {
       lastTool: "Bash(npm test)",
     }),
   ]);
-  const text = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
+  const text = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark").join("\n");
   expect(text).toContain("waiting");
   expect(text).toContain("antelopemoo-7b");
   expect(text).toContain("opus-5");
@@ -131,7 +132,7 @@ test("render marks the selected row and only that row", () => {
     row({ pid: 1, status: "waiting", name: "aaa" }),
     row({ pid: 2, status: "busy", name: "bbb" }),
   ]);
-  const lines = render(snap, 62, { selected: 1, idleExpanded: false }, "/Users/mark");
+  const lines = render(snap, 62, { selectedPid: 2, idleExpanded: false }, "/Users/mark");
   const marked = lines.filter((l) => l.startsWith("▸"));
   expect(marked).toHaveLength(1);
   expect(marked[0]).toContain("bbb");
@@ -149,7 +150,7 @@ test("render never exceeds the requested width", () => {
     }),
   ]);
   for (const width of [40, 62, 100]) {
-    for (const line of render(snap, width, { selected: 0, idleExpanded: false }, "/Users/mark")) {
+    for (const line of render(snap, width, { selectedPid: null, idleExpanded: false }, "/Users/mark")) {
       expect([...line].length).toBeLessThanOrEqual(width);
     }
   }
@@ -160,7 +161,7 @@ test("render puts the model in a fixed column regardless of its length", () => {
     row({ pid: 1, status: "busy", name: "sessionname", model: "claude-opus-5" }),
     row({ pid: 2, status: "busy", name: "sessionname", model: "claude-fable-5-1" }),
   ]);
-  const heads = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark")
+  const heads = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark")
     .filter((l) => /^[ ▸][●◆] /.test(l));
   expect(heads).toHaveLength(2);
   expect(heads[0]?.indexOf("opus-5")).toBe(heads[1]?.indexOf("fable-5-1"));
@@ -173,7 +174,7 @@ test("render never emits two blank lines in a row", () => {
     row({ pid: 3, status: "idle" }),
     row({ pid: 4, status: "idle" }),
   ]);
-  const lines = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark");
+  const lines = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark");
   for (let i = 1; i < lines.length; i++) {
     expect(lines[i] === "" && lines[i - 1] === "").toBe(false);
   }
@@ -181,7 +182,7 @@ test("render never emits two blank lines in a row", () => {
 
 test("render shows a bare dash for a missing user message, not a quoted one", () => {
   const snap = snapshot([row({ pid: 1, status: "busy", lastUserMessage: null })]);
-  const text = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
+  const text = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark").join("\n");
   expect(text).toContain("› —");
   expect(text).not.toContain('"—"');
 });
@@ -192,18 +193,47 @@ test("render leaves no trailing whitespace on any line", () => {
     row({ pid: 2, status: "busy" }),
     row({ pid: 3, status: "idle" }),
   ]);
-  for (const line of render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark")) {
+  for (const line of render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark")) {
     expect(line).toBe(line.replace(/\s+$/, ""));
   }
 });
 
 test("render reports an empty session list", () => {
-  const text = render(snapshot([]), 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
+  const text = render(snapshot([]), 62, { selectedPid: null, idleExpanded: false }, "/Users/mark").join("\n");
   expect(text).toContain("no live sessions");
 });
 
 test("render reports unreadable session files", () => {
   const snap = { ...snapshot([]), malformed: 2 };
-  const text = render(snap, 62, { selected: 0, idleExpanded: false }, "/Users/mark").join("\n");
+  const text = render(snap, 62, { selectedPid: null, idleExpanded: false }, "/Users/mark").join("\n");
   expect(text).toContain("2 unreadable session files");
+});
+
+test("render marks the row whose pid is selected, wherever it has sorted to", () => {
+  const snap = snapshot([
+    row({ pid: 1, status: "waiting", name: "alpha", statusUpdatedAt: NOW - 10_000 }),
+    row({ pid: 2, status: "busy", name: "bravo", statusUpdatedAt: NOW - 20_000 }),
+  ]);
+  const marked = render(snap, 62, { selectedPid: 2, idleExpanded: false }, "/Users/mark")
+    .filter((l) => l.startsWith("▸"));
+  expect(marked).toHaveLength(1);
+  expect(marked[0]).toContain("bravo");
+});
+
+test("render says so when the usage rows are stale", () => {
+  const base = snapshot([]);
+  const fresh = render(
+    { ...base, usageAt: NOW - 30_000 },
+    62,
+    { selectedPid: null, idleExpanded: false },
+    "/Users/mark",
+  ).join("\n");
+  const stale = render(
+    { ...base, usageAt: NOW - 3 * 3_600_000 },
+    62,
+    { selectedPid: null, idleExpanded: false },
+    "/Users/mark",
+  ).join("\n");
+  expect(fresh).not.toContain("refresh failing");
+  expect(stale).toContain("3h old — refresh failing");
 });

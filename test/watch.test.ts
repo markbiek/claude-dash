@@ -28,7 +28,7 @@ function row(over: Partial<SessionRow>): SessionRow {
 }
 
 function snapshot(sessions: SessionRow[], usage: Snapshot["usage"] = ok([])): Snapshot {
-  return { generatedAt: NOW, usage, sessions, malformed: 0, dead: 0 };
+  return { generatedAt: NOW, usageAt: NOW, usage, sessions, malformed: 0, dead: 0 };
 }
 
 test("a session entering waiting produces a notify and a status chip", () => {
@@ -197,7 +197,7 @@ test("a failed usage fetch changes nothing", () => {
   const prev = { sessions: {}, firedUsage: { "weekly_all:x": 50 } };
   const { actions, next } = diffWatch(
     prev,
-    { generatedAt: NOW, usage: { ok: false, reason: "reauth" }, sessions: [], malformed: 0, dead: 0 },
+    { generatedAt: NOW, usageAt: null, usage: { ok: false, reason: "reauth" }, sessions: [], malformed: 0, dead: 0 },
     THRESHOLDS,
   );
   expect(actions).toEqual([]);

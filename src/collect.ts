@@ -6,7 +6,7 @@ import {
   type CmuxMap,
   type CmuxTarget,
 } from "./cmuxmap";
-import type { Result } from "./result";
+import { isOk, ok, type Result } from "./result";
 import {
   readSessionsDir,
   type RawSession,
@@ -17,7 +17,7 @@ import {
   readDetail,
   type SessionDetail,
 } from "./transcript";
-import { getUsage, type UsageRow } from "./usage";
+import { getUsage, type UsageCache, type UsageRow } from "./usage";
 
 export type SessionRow = RawSession &
   SessionDetail & { target: CmuxTarget | null };
@@ -25,6 +25,9 @@ export type SessionRow = RawSession &
 export type Snapshot = {
   generatedAt: number;
   usage: Result<UsageRow[]>;
+  // When those usage rows were fetched. Null when there are none. The renderer
+  // needs this to say so when a failed refresh left old numbers on screen.
+  usageAt: number | null;
   sessions: SessionRow[];
   malformed: number;
   dead: number;
@@ -34,7 +37,7 @@ export function assemble(args: {
   now: number;
   scan: SessionScan;
   details: Map<number, SessionDetail>;
-  usage: Result<UsageRow[]>;
+  usage: Result<UsageCache>;
   map: CmuxMap;
 }): Snapshot {
   const sessions = args.scan.sessions.map((s): SessionRow => {
@@ -44,7 +47,8 @@ export function assemble(args: {
 
   return {
     generatedAt: args.now,
-    usage: args.usage,
+    usage: isOk(args.usage) ? ok(args.usage.value.rows) : args.usage,
+    usageAt: isOk(args.usage) ? args.usage.value.fetchedAt : null,
     sessions,
     malformed: args.scan.malformed,
     dead: args.scan.dead,
@@ -86,7 +90,7 @@ export async function collect(opts: {
     scan.sessions.map(async (s) => {
       let detail: SessionDetail;
       try {
-        detail = await readDetail(projectsDir, s.cwd, s.sessionId);
+        detail = await readDetail(projectsDir, s.cwd, s.sessionId, opts.now);
       } catch {
         // readDetail rejects when it reaches the read itself and the file is
         // unreadable: an unreadable transcript rejects with EACCES once the

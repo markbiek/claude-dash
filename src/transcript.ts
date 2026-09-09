@@ -154,19 +154,30 @@ export function parseTranscript(text: string): SessionDetail {
   return detail;
 }
 
-const pathCache = new Map<string, string | null>();
+type PathCacheEntry = { path: string | null; at: number };
+
+// Claude Code writes the session registry file seconds before it writes the
+// transcript, and the dashboard polls faster than that gap. A found path is
+// cached forever because it never moves, but a miss has to expire: otherwise a
+// session that starts after the dashboard is running never gets its detail at
+// all, for the life of the process.
+const pathCache = new Map<string, PathCacheEntry>();
+const MISS_TTL_MS = 15_000;
 
 export async function findTranscript(
   projectsDir: string,
   cwd: string,
   sessionId: string,
+  now: number,
 ): Promise<string | null> {
   const cached = pathCache.get(sessionId);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && (cached.path !== null || now - cached.at < MISS_TTL_MS)) {
+    return cached.path;
+  }
 
   const guess = join(projectsDir, projectDirName(cwd), `${sessionId}.jsonl`);
   if (await Bun.file(guess).exists()) {
-    pathCache.set(sessionId, guess);
+    pathCache.set(sessionId, { path: guess, at: now });
     return guess;
   }
 
@@ -174,19 +185,19 @@ export async function findTranscript(
   try {
     dirs = await readdir(projectsDir);
   } catch {
-    pathCache.set(sessionId, null);
+    pathCache.set(sessionId, { path: null, at: now });
     return null;
   }
 
   for (const dir of dirs) {
     const candidate = join(projectsDir, dir, `${sessionId}.jsonl`);
     if (await Bun.file(candidate).exists()) {
-      pathCache.set(sessionId, candidate);
+      pathCache.set(sessionId, { path: candidate, at: now });
       return candidate;
     }
   }
 
-  pathCache.set(sessionId, null);
+  pathCache.set(sessionId, { path: null, at: now });
   return null;
 }
 
@@ -197,8 +208,9 @@ export async function readDetail(
   projectsDir: string,
   cwd: string,
   sessionId: string,
+  now: number,
 ): Promise<SessionDetail> {
-  const path = await findTranscript(projectsDir, cwd, sessionId);
+  const path = await findTranscript(projectsDir, cwd, sessionId, now);
   if (path === null) return emptyDetail();
 
   const file = Bun.file(path);

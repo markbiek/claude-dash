@@ -38,7 +38,7 @@ test("assemble attaches a cmux target when the tmux session matches", () => {
       dead: 0,
     },
     details: new Map(),
-    usage: ok([]),
+    usage: ok({ fetchedAt: 4000, rows: [] }),
     map: MAP,
   });
   expect(snap.sessions[0]?.target?.workspace).toBe("workspace:17");
@@ -53,7 +53,7 @@ test("assemble leaves the target null when no workspace matches", () => {
       dead: 0,
     },
     details: new Map(),
-    usage: ok([]),
+    usage: ok({ fetchedAt: 4000, rows: [] }),
     map: MAP,
   });
   expect(snap.sessions[0]?.target).toBe(null);
@@ -71,7 +71,7 @@ test("assemble merges detail by pid and falls back to an empty detail", () => {
       dead: 1,
     },
     details,
-    usage: ok([]),
+    usage: ok({ fetchedAt: 4000, rows: [] }),
     map: MAP,
   });
   expect(snap.sessions[0]?.model).toBe("claude-opus-5");

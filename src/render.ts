@@ -2,10 +2,14 @@ import type { SessionRow, Snapshot } from "./collect";
 import { bar, pad, relAge, resetLabel, shortPath, truncate } from "./format";
 import { isOk } from "./result";
 
-export type UiState = { selected: number; idleExpanded: boolean };
+// The selection is a pid, not an index. The list re-sorts whenever a session
+// changes status, and an index would then point at a different session than the
+// one the user is looking at.
+export type UiState = { selectedPid: number | null; idleExpanded: boolean };
 export type Group = "waiting" | "busy" | "other";
 
 const IDLE_PREVIEW = 5;
+const STALE_USAGE_MS = 120_000;
 // The model sits in a fixed column so the eye can scan it. Nine characters
 // covers the longest short name in use (fable-5-1, haiku-4-5).
 const MODEL_W = 9;
@@ -81,13 +85,22 @@ function usageLines(snap: Snapshot, width: number): string[] {
   }
 
   const barWidth = Math.max(6, Math.min(21, width - 41));
-  return snap.usage.value.map((u) => {
+  const lines = snap.usage.value.map((u) => {
     const percent = String(Math.round(u.percent)).padStart(3);
     const reset = resetLabel(u.resetsAt, snap.generatedAt);
     const line =
       ` ${pad(u.label, 8)} ${bar(u.percent, barWidth)} ${percent}%   resets ${reset}`;
     return truncate(line, width);
   });
+
+  // A failed refresh serves the last good numbers. Say how old they are, or the
+  // dashboard is confidently wrong and the only tell is a reset time in the past.
+  const age = snap.usageAt === null ? 0 : snap.generatedAt - snap.usageAt;
+  if (age >= STALE_USAGE_MS) {
+    lines.push(truncate(` ${relAge(age)} old — refresh failing`, width));
+  }
+
+  return lines;
 }
 
 function detailLines(
@@ -154,7 +167,7 @@ export function render(
   }
 
   let lastGroup: Group | null = null;
-  visible.forEach((row, index) => {
+  visible.forEach((row) => {
     const group = groupOf(row.status);
     if (group !== lastGroup) {
       // A detail block already ends in a blank line. Do not add a second.
@@ -162,7 +175,7 @@ export function render(
       lines.push(sectionLine(GROUP_TITLE[group], width));
       lastGroup = group;
     }
-    const selected = index === ui.selected;
+    const selected = row.pid === ui.selectedPid;
     if (group === "other") {
       lines.push(idleLine(row, selected, snap, width, home));
     } else {

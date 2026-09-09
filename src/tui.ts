@@ -19,7 +19,7 @@ export async function runTui(opts: {
   cmuxTtlMs: number;
   intervalMs: number;
 }): Promise<void> {
-  const ui: UiState = { selected: 0, idleExpanded: false };
+  const ui: UiState = { selectedPid: null, idleExpanded: false };
   let snap: Snapshot | null = null;
   let message: string | null = null;
   let running = true;
@@ -44,8 +44,12 @@ export async function runTui(opts: {
         usageTtlMs: opts.usageTtlMs,
         cmuxTtlMs: opts.cmuxTtlMs,
       });
-      const count = visibleRows(snap.sessions, ui).length;
-      if (ui.selected >= count) ui.selected = Math.max(0, count - 1);
+      // The selected session can end between polls. Fall back to the top row
+      // rather than leaving the marker on a pid that is no longer listed.
+      const rows = visibleRows(snap.sessions, ui);
+      if (!rows.some((r) => r.pid === ui.selectedPid)) {
+        ui.selectedPid = rows[0]?.pid ?? null;
+      }
     } catch (e) {
       message = `collect failed: ${String(e)}`;
     }
@@ -54,16 +58,19 @@ export async function runTui(opts: {
 
   function move(delta: number): void {
     if (snap === null) return;
-    const count = visibleRows(snap.sessions, ui).length;
-    if (count === 0) return;
-    ui.selected = Math.min(count - 1, Math.max(0, ui.selected + delta));
+    const rows = visibleRows(snap.sessions, ui);
+    if (rows.length === 0) return;
+    const current = rows.findIndex((r) => r.pid === ui.selectedPid);
+    const from = current === -1 ? 0 : current;
+    const to = Math.min(rows.length - 1, Math.max(0, from + delta));
+    ui.selectedPid = rows[to]?.pid ?? null;
     paint();
   }
 
   async function focusSelected(): Promise<void> {
     if (snap === null) return;
     const rows = visibleRows(snap.sessions, ui);
-    const row = rows[ui.selected];
+    const row = rows.find((r) => r.pid === ui.selectedPid);
     if (row === undefined) return;
     const plan = planFocus(row);
     if (!isOk(plan)) {

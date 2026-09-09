@@ -146,10 +146,10 @@ export async function getUsage(opts: {
   cachePath: string;
   now: number;
   ttlMs: number;
-}): Promise<Result<UsageRow[]>> {
+}): Promise<Result<UsageCache>> {
   const cache = await readCache(opts.cachePath);
   if (isFresh(cache, opts.now, opts.ttlMs) && cache !== null) {
-    return ok(cache.rows);
+    return ok(cache);
   }
 
   const creds = readCredentials();
@@ -160,11 +160,13 @@ export async function getUsage(opts: {
 
   const fresh = await fetchUsage(creds.value.accessToken);
   if (!isOk(fresh)) {
-    if (cache !== null) return ok(cache.rows);
+    // Serving a stale cache beats a blank row, but the caller has to be able to
+    // tell, so the original fetchedAt goes out with it.
+    if (cache !== null) return ok(cache);
     return fresh;
   }
 
   const next: UsageCache = { fetchedAt: opts.now, rows: fresh.value };
   await Bun.write(opts.cachePath, JSON.stringify(next));
-  return fresh;
+  return ok(next);
 }

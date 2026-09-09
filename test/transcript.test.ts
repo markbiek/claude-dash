@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseTranscript, projectDirName } from "../src/transcript";
+import { findTranscript, parseTranscript, projectDirName, readDetail } from "../src/transcript";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const FIXTURE = readFileSync(
   join(import.meta.dir, "fixtures", "transcript.jsonl"),
@@ -120,4 +122,24 @@ test("parseTranscript returns nulls for an empty file", () => {
   expect(d.branch).toBe(null);
   expect(d.lastUserMessage).toBe(null);
   expect(d.lastTool).toBe(null);
+});
+
+test("findTranscript stops caching a miss once the transcript appears", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "claude-dash-tr-"));
+  const projects = join(dir, "projects");
+  mkdirSync(join(projects, "-tmp-n"), { recursive: true });
+  const at = 1_000_000;
+
+  expect(await findTranscript(projects, "/tmp/n", "sid", at)).toBe(null);
+
+  writeFileSync(
+    join(projects, "-tmp-n", "sid.jsonl"),
+    JSON.stringify({ type: "user", message: { content: "the real question" } }) + "\n",
+  );
+
+  expect(await findTranscript(projects, "/tmp/n", "sid", at + 5_000)).toBe(null);
+  expect(await findTranscript(projects, "/tmp/n", "sid", at + 20_000)).not.toBe(null);
+
+  const detail = await readDetail(projects, "/tmp/n", "sid", at + 20_000);
+  expect(detail.lastUserMessage).toBe("the real question");
 });
