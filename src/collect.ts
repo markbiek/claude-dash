@@ -84,7 +84,17 @@ export async function collect(opts: {
   const details = new Map<number, SessionDetail>();
   await Promise.all(
     scan.sessions.map(async (s) => {
-      const detail = await readDetail(projectsDir, s.cwd, s.sessionId);
+      let detail: SessionDetail;
+      try {
+        detail = await readDetail(projectsDir, s.cwd, s.sessionId);
+      } catch {
+        // readDetail rejects when it reaches the read itself and the file is
+        // unreadable: an unreadable transcript rejects with EACCES once the
+        // detail cache misses on size or mtime. Promise.all is fail-fast, so
+        // without this catch one such session would discard the whole
+        // snapshot, including the usage rows fetched alongside it.
+        detail = emptyDetail();
+      }
       const branch = detail.branch ?? readBranchFromGit(s.cwd);
       details.set(s.pid, { ...detail, branch });
     }),
