@@ -2,7 +2,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { collect } from "./collect";
+import { planFocus, runFocus } from "./focus";
 import { render } from "./render";
+import { isOk } from "./result";
 
 const HOME = homedir();
 const CLAUDE_DIR = join(HOME, ".claude");
@@ -18,6 +20,39 @@ function ensureCacheDir(): void {
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
   ensureCacheDir();
+
+  const focusIndex = args.indexOf("--focus");
+  if (focusIndex !== -1) {
+    const pid = Number(args[focusIndex + 1]);
+    if (!Number.isInteger(pid)) {
+      process.stderr.write("usage: claude-dash --focus <pid>\n");
+      return 2;
+    }
+    const snap = await collect({
+      now: Date.now(),
+      claudeDir: CLAUDE_DIR,
+      cachePath: USAGE_CACHE,
+      usageTtlMs: USAGE_TTL_MS,
+      cmuxTtlMs: CMUX_TTL_MS,
+    });
+    const row = snap.sessions.find((s) => s.pid === pid);
+    if (row === undefined) {
+      process.stderr.write(`no live session with pid ${pid}\n`);
+      return 1;
+    }
+    const plan = planFocus(row);
+    if (!isOk(plan)) {
+      process.stderr.write(plan.reason + "\n");
+      return 1;
+    }
+    if (plan.value.hint !== null) process.stderr.write(plan.value.hint + "\n");
+    const result = await runFocus(plan.value);
+    if (!isOk(result)) {
+      process.stderr.write(result.reason + "\n");
+      return 1;
+    }
+    return 0;
+  }
 
   if (args.includes("--json")) {
     const snap = await collect({
