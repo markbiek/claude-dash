@@ -25,12 +25,13 @@ test("projectDirName matches the real directory names on disk", () => {
   );
 });
 
-test("parseTranscript fills every field from the real fixture", () => {
+test("parseTranscript fills every field from a full-shape fixture", () => {
   const d = parseTranscript(FIXTURE);
-  expect(typeof d.model).toBe("string");
-  expect(typeof d.branch).toBe("string");
-  expect(typeof d.lastUserMessage).toBe("string");
-  expect(typeof d.lastTool).toBe("string");
+  expect(d.model).toBe("claude-opus-5");
+  expect(d.effort).toBe("high");
+  expect(d.branch).toBe("add/widget-export");
+  expect(d.lastUserMessage).toBe("Also add a JSON export while you are in there.");
+  expect(d.lastTool).toBe("Bash(bun test test/widgets)");
 });
 
 test("parseTranscript takes the most recent user message", () => {
