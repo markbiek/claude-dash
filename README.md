@@ -16,8 +16,12 @@ cmux Dock pane.
     j / k    move the selection
     Tab      expand or collapse the idle list
     Enter    focus the selected session
+    click    select that session and focus it
     r        refetch the usage limits
     q        quit
+
+Mouse reporting is on only while the TUI runs, and only in its own pane.
+Plain click-drag does not select text there; shift-drag still does.
 
 ## Develop
 

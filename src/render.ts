@@ -150,20 +150,33 @@ function idleLine(
   return fit(`${sel}  ${name} ${place}`, age.padStart(AGE_W), width);
 }
 
-export function render(
+// One frame of output. `pids` runs parallel to `lines`: the pid of the session
+// drawn on that line, or null for anything that is not a session (usage bars,
+// section headers, blanks). A mouse click resolves through it.
+export type Frame = { lines: string[]; pids: (number | null)[] };
+
+export function renderFrame(
   snap: Snapshot,
   width: number,
   ui: UiState,
   home: string,
-): string[] {
-  const lines: string[] = [...usageLines(snap, width), ""];
+): Frame {
+  const lines: string[] = [];
+  const pids: (number | null)[] = [];
+  function push(line: string, pid: number | null = null): void {
+    lines.push(line);
+    pids.push(pid);
+  }
+
+  for (const line of usageLines(snap, width)) push(line);
+  push("");
 
   const ordered = orderRows(snap.sessions);
   const visible = visibleRows(snap.sessions, ui);
   const hidden = ordered.length - visible.length;
 
   if (ordered.length === 0) {
-    lines.push(truncate(" no live sessions", width));
+    push(truncate(" no live sessions", width));
   }
 
   let lastGroup: Group | null = null;
@@ -171,26 +184,37 @@ export function render(
     const group = groupOf(row.status);
     if (group !== lastGroup) {
       // A detail block already ends in a blank line. Do not add a second.
-      if (lastGroup !== null && lines[lines.length - 1] !== "") lines.push("");
-      lines.push(sectionLine(GROUP_TITLE[group], width));
+      if (lastGroup !== null && lines[lines.length - 1] !== "") push("");
+      push(sectionLine(GROUP_TITLE[group], width));
       lastGroup = group;
     }
     const selected = row.pid === ui.selectedPid;
     if (group === "other") {
-      lines.push(idleLine(row, selected, snap, width, home));
+      push(idleLine(row, selected, snap, width, home), row.pid);
     } else {
-      lines.push(...detailLines(row, selected, snap, width, home));
-      lines.push("");
+      for (const line of detailLines(row, selected, snap, width, home)) {
+        push(line, row.pid);
+      }
+      push("");
     }
   });
 
   if (hidden > 0) {
-    lines.push(truncate(`   + ${hidden} more`, width));
+    push(truncate(`   + ${hidden} more`, width));
   }
   if (snap.malformed > 0) {
     const noun = snap.malformed === 1 ? "file" : "files";
-    lines.push(truncate(` ${snap.malformed} unreadable session ${noun}`, width));
+    push(truncate(` ${snap.malformed} unreadable session ${noun}`, width));
   }
 
-  return lines;
+  return { lines, pids };
+}
+
+export function render(
+  snap: Snapshot,
+  width: number,
+  ui: UiState,
+  home: string,
+): string[] {
+  return renderFrame(snap, width, ui, home).lines;
 }

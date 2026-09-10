@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { groupOf, orderRows, render, shortModel, visibleRows } from "../src/render";
+import { groupOf, orderRows, render, renderFrame, shortModel, visibleRows } from "../src/render";
 import type { SessionRow, Snapshot } from "../src/collect";
 import { err, ok } from "../src/result";
 
@@ -236,4 +236,35 @@ test("render says so when the usage rows are stale", () => {
   ).join("\n");
   expect(fresh).not.toContain("refresh failing");
   expect(stale).toContain("3h old — refresh failing");
+});
+
+test("renderFrame maps every session line to its pid and nothing else", () => {
+  const snap = snapshot([
+    row({ pid: 7, status: "busy", name: "busy-one" }),
+    row({ pid: 9, status: "idle", name: "idle-one" }),
+  ]);
+  const ui = { selectedPid: null, idleExpanded: true };
+  const { lines, pids } = renderFrame(snap, 62, ui, "/Users/mark");
+
+  expect(pids.length).toBe(lines.length);
+  expect(lines).toEqual(render(snap, 62, ui, "/Users/mark"));
+
+  // All four detail lines of a running session belong to it.
+  const busyLines = pids.map((p, i) => (p === 7 ? i : -1)).filter((i) => i !== -1);
+  expect(busyLines.length).toBe(4);
+  expect(lines[busyLines[0]!]).toContain("busy-one");
+  expect(lines[busyLines[3]!]).toContain("Bash(npm test)");
+
+  // An idle session is one line.
+  const idleLines = pids.map((p, i) => (p === 9 ? i : -1)).filter((i) => i !== -1);
+  expect(idleLines.length).toBe(1);
+  expect(lines[idleLines[0]!]).toContain("idle-one");
+
+  // Usage bars, section headers and blank lines map to nothing.
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line === "" || line.startsWith(" ──") || /^ (SESSION|WEEK|FABLE)/.test(line)) {
+      expect(pids[i]).toBe(null);
+    }
+  }
 });
