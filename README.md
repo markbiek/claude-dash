@@ -31,7 +31,12 @@ The Dock control and the launchd job both point at `~/bin/claude-dash`, so a
 rebuild only takes effect once it is copied there:
 
     bun run build
-    cp dist/claude-dash ~/bin/claude-dash
+    install -m 755 dist/claude-dash ~/bin/claude-dash
+
+Use `install`, not `cp`. `cp` writes into the destination file in place. If the
+old binary is still running, macOS invalidates the new image and sends SIGKILL
+on every exec, so the dashboard dies at startup with `killed` and no output.
+`install` unlinks the destination first, which avoids this.
 
 Then see `install/` for the two files. Copy the plist to
 `~/Library/LaunchAgents`.

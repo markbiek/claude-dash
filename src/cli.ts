@@ -90,7 +90,7 @@ async function main(): Promise<number> {
       cmuxTtlMs: CMUX_TTL_MS,
     });
     const width = process.stdout.columns ?? 62;
-    const lines = render(snap, width, { selectedPid: null, idleExpanded: false }, HOME);
+    const lines = render(snap, width, { selectedPid: null, idleExpanded: true }, HOME);
     process.stdout.write(lines.join("\n") + "\n");
     return 0;
   }

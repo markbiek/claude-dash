@@ -19,7 +19,7 @@ export async function runTui(opts: {
   cmuxTtlMs: number;
   intervalMs: number;
 }): Promise<void> {
-  const ui: UiState = { selectedPid: null, idleExpanded: false };
+  const ui: UiState = { selectedPid: null, idleExpanded: true };
   let snap: Snapshot | null = null;
   let message: string | null = null;
   let running = true;
