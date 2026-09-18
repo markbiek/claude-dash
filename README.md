@@ -3,6 +3,9 @@
 A dashboard for Claude Code usage limits and live sessions, built to run in a
 cmux Dock pane.
 
+<img width="1485" height="640" alt="image" src="https://github.com/user-attachments/assets/2daf4583-0810-4772-8515-becbc759c70b" />
+
+
 ## Commands
 
     claude-dash              # the TUI
